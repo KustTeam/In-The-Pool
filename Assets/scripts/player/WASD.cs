@@ -1,34 +1,32 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody))]
 public class WASD : MonoBehaviour
 {
     public float speed = 5f;
-
-    private GameObject cam;
-    private float yRotation;
+    private Rigidbody rb;
 
     void Awake()
     {
-        cam = GameObject.FindGameObjectWithTag("MainCamera");
+        rb = GetComponent<Rigidbody>();
+        
+        // Автоматически включаем защиту от бешеного кручения стен в коде
+        rb.freezeRotation = true;
     }
 
-    void Update()
+    void FixedUpdate()
     {
-        if (cam != null)
-        {
-            yRotation = cam.transform.eulerAngles.y;
-            transform.rotation = Quaternion.Euler(0f, yRotation, 0f);
-        }
-
+        // Получаем ввод
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
 
-        Vector3 move = new Vector3(moveX, 0f, moveZ);
-        if (move.magnitude > 0.01f)
-        {
-            // Rotate movement vector by camera Y rotation
-            move = Quaternion.Euler(0f, yRotation, 0f) * move;
-            transform.Translate(move * speed * Time.deltaTime, Space.World);
-        }
+        // Двигаемся относительно НАПРАВЛЕНИЯ ИГРОКА (куда он повернут мышкой)
+        Vector3 move = (transform.forward * moveZ) + (transform.right * moveX);
+
+        // Ограничиваем скорость по диагонали
+        if (move.magnitude > 1f) move.Normalize();
+
+        // Плавно меняем скорость Rigidbody без рывков и прохождения сквозь стены
+        rb.linearVelocity = new Vector3(move.x * speed, rb.linearVelocity.y, move.z * speed);
     }
 }
